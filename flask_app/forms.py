@@ -1,7 +1,8 @@
 #python classes that turn into html forms courtesy of wtforms
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, BooleanField
-from wtforms.validators import DataRequired, Length, Email, EqualTo
+from wtforms.validators import DataRequired, Length, Email, EqualTo, ValidationError
+from flask_app.models import User
 
 class RegistrationForm(FlaskForm): 
     username = StringField('Username', 
@@ -16,6 +17,17 @@ class RegistrationForm(FlaskForm):
     confirm_password = PasswordField('Confirm Password', validators=[DataRequired(), EqualTo('password')])
 
     submit = SubmitField('Sign Up')
+
+    def validate_username(self, username):
+        user = User.query.filter_by(username=username.data).first()
+        if user:
+            raise ValidationError('username not available')
+    
+    def validate_email(self, email):
+        user = User.query.filter_by(email=email.data).first()
+        if user:
+            raise ValidationError('email is taken')
+        
 
 class LoginForm(FlaskForm): 
     email = StringField('Email', 

@@ -12,7 +12,7 @@ class User(db.Model):
     post = db.relationship('Recipe', backref='chef', lazy=True)
 
     def __repr__(self) -> str:
-        return f"User('{self.username}', '{self.email}')"
+        return f"User('{self.username}','{self.first_name}','{self.last_name}', '{self.email}')"
 
 class Recipe(db.Model):
     id =db.Column(db.Integer, primary_key=True)
