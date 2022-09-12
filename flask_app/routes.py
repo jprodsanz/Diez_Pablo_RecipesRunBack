@@ -26,7 +26,7 @@ recipes = [
 
 @app.route('/')
 @app.route('/dashboard')
-def home():
+def dashboard():
     return render_template('dashboard.html', recipes=recipes)
 
 @app.route('/about')
@@ -38,7 +38,7 @@ def register():
     form = RegistrationForm()
     if form.validate_on_submit():
         flash(f'Account created for {form.username.data}!', 'success')
-        return redirect(url_for('home'))
+        return redirect(url_for('dashboard'))
     return render_template('register.html', title='Register', form=form)
 
 @app.route('/login', methods=['GET','POST'])
@@ -47,7 +47,7 @@ def login():
     if form.validate_on_submit():
         if form.email.data == 'pablox@gmail.com' and form.password.data == 'password':
             flash('You are logged in!','success')
-            return redirect(url_for('home'))
+            return redirect(url_for('dashboard'))
         else:
             flash('Login Unsuccessful. Check your info', 'danger')
     return render_template('login.html', title='Login', form=form)
