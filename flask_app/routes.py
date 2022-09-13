@@ -1,33 +1,15 @@
-from flask import render_template, flash, redirect, url_for
-from flask_app.models import User, Recipe
-from flask_app.forms import RegistrationForm, LoginForm
-from flask_app import app, db, bcrypt 
+from flask import render_template, flash, redirect, url_for,request 
+from flask_app.models import User, Post
+from flask_app.forms import RegistrationForm, LoginForm, LoginForm, UpdateAccountForm, PostRecipe
+from flask_app import app, db, bcrypt
+from flask_login import login_user, current_user, logout_user, login_required
 
-recipes = [
-    {
-        'chef': ' Pablo X',
-        'dish': 'Tacos',
-        'content': 'Not under 30 mins',
-        'date_posted': 'Sept 11, 2022',
-    },
-    {
-        'chef': ' Ana Sofia',
-        'dish': 'Asado Negro',
-        'content': 'Yes, under 30 mins',
-        'date_posted': 'Sept 11, 2022',
-    },
-    {
-        'chef': ' Sara Restrepo',
-        'dish': 'Arepas',
-        'content': 'Maybe under 30 mins',
-        'date_posted': 'Sept 11, 2022',
-    }
-]
 
 @app.route('/')
 @app.route('/dashboard')
 def dashboard():
-    return render_template('dashboard.html', recipes=recipes)
+    recipes = Recipe.query.all()
+    return render_template('dashboard.html',recipes=recipes)
 
 @app.route('/about')
 def about():
@@ -35,6 +17,8 @@ def about():
 
 @app.route('/register', methods=['GET','POST'])
 def register():
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
     form = RegistrationForm()
     if form.validate_on_submit():
         hashed_password = bcrypt.generate_password_hash(form.password.data).decode('utf-8')
@@ -48,11 +32,49 @@ def register():
 
 @app.route('/login', methods=['GET','POST'])
 def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
     form = LoginForm()
     if form.validate_on_submit():
-        if form.email.data == 'pablox@gmail.com' and form.password.data == 'password':
-            flash('You are logged in!','success')
-            return redirect(url_for('dashboard'))
+        user = User.query.filter_by(email=form.email.data).first()
+        if user and bcrypt.check_password_hash(user.password, form.password.data):
+            login_user(user, remember=form.remember.data)
+            next_page = request.args.get('next')
+            return redirect(next_page) if next_page else redirect(url_for('dashboard'))
         else:
-            flash('Login Unsuccessful. Check your info', 'danger')
+            flash('Login Unsuccessful. Check your info!', 'danger')
     return render_template('login.html', title='Login', form=form)
+
+@app.route('/logout', methods=['GET','POST'])
+def logout():
+    logout_user()
+    return redirect(url_for('dashboard'))
+
+@app.route('/account', methods=['GET','POST'])
+@login_required
+def account():
+    form = UpdateAccountForm()
+    if form.validate_on_submit():
+        current_user.username = form.username.data 
+        current_user.email = form.email.data
+        db.session.commit()
+        flash('Your account has been updated!', 'success')
+        return redirect(url_for('account'))
+    elif request.method == 'GET':
+        form.username.data = current_user.username
+        form.email.data = current_user.email
+    return render_template('account.html', title='Account', form=form)
+    
+
+@app.route("/post/new", methods=['GET', 'POST'])
+@login_required
+def new_post():
+    form = PostForm()
+    if form.validate_on_submit():
+        post = Post(title=form.title.data, content=form.content.data, author=current_user)
+        db.session.add(post)
+        db.session.commit()
+        flash('Your post has been created!', 'success')
+        return redirect(url_for('home'))
+    return render_template('create_post.html', title='New Post',
+                            form=form, legend='New Post')
